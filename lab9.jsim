@@ -182,8 +182,8 @@ Xra2sel_mux ra2sel#5 rb[4:0] rc[4:0] ra2_[4:0] mux2
 * BSEL MUX (RD2 if 0, C (sign-extended) if 1)
 Xbsel_mux bsel#32 rd2_[31:0] c15#16 c[15:0] b[31:0] mux2
 
-* WDSEL MUX (<PC>+4 if 0, ALU Output if 1, Memory RD if 2)
-Xwdsel_mux 
+* WDSEL MUX (<PC>+4 if 00, ALU Output if 01, Memory RD if 10)
+Xwdsel_mux wdsel1#32 wdsel0#32 pc_plus_4[31:0] memrd[31:0] f[31:0] 0#32 wd[31:0] mux4
 
 *******************************************************************************
 * NOR Gate for Z
