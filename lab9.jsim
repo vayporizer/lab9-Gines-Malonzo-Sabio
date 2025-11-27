@@ -9,7 +9,7 @@
 .include "stdcell.jsim"
 
 *******************************************************************************
-* FULL ADDER AND 32-BIT RIPPLE ADDER
+* Full Adder and 32-bit Ripple Adder
 *******************************************************************************
 .subckt fa a b cin sum cout
     XxorA a b xAB xor2        
@@ -92,7 +92,7 @@
 .ends
 
 *******************************************************************************
-* INSTRUCTION / DATA MEMORY FILE
+* Instruction / Data Memory File
 *******************************************************************************
 Xmemory  vdd  0    0   pc[8:2]    inst[31:0]
 +        vdd  0    0   mema[8:2]  memrd[31:0]
@@ -100,7 +100,7 @@ Xmemory  vdd  0    0   pc[8:2]    inst[31:0]
 + $memory width=32 nlocations=128 file="lab7.bin"
 
 *******************************************************************************
-* REGISTER FILE
+* Register File
 *******************************************************************************
 Xregisters  vdd  0    0      ra1_[4:0]  rd1_[31:0]
 +           vdd  0    0      ra2_[4:0]  rd2_[31:0]
@@ -123,7 +123,7 @@ Xwerf_control werf not_r31 werf_ and2
 
 
 *******************************************************************************
-* CONTROL LOGIC
+* Control Logic
 *******************************************************************************
 Xcontrol  vdd  0  0  z opcode[5:0]  control[13:0]
 + $memory width=14 nlocations=128 contents=(
@@ -154,7 +154,7 @@ Xcontrol  vdd  0  0  z opcode[5:0]  control[13:0]
 .ends
 
 *******************************************************************************
-* CONTROL SIGNALS
+* Control Signals
 *******************************************************************************
 Xjcontrola control[13:12] pcsel[1:0] join
 Xjcontrolb control11      ra2sel     join
@@ -165,7 +165,7 @@ Xjcontrolf control1       wr         join
 Xjcontrolg control0       werf       join
 
 *******************************************************************************
-* INSTRUCTION SIGNALS
+* Instruction Signals
 *******************************************************************************
 Xjinsta inst[31:26] opcode[5:0] join
 Xjinstb inst[25:21] rc[4:0]     join
@@ -186,10 +186,27 @@ Xbsel_mux bsel#32 rd2_[31:0] c15#16 c[15:0] b[31:0] mux2
 Xwdsel_mux 
 
 *******************************************************************************
-* RESET LOGIC
+* NOR Gate for Z
 *******************************************************************************
-Wreset reset nrz(0, 5, 10ns, 0ns, 0.001ns, 0.001ns) 1 0
-Xreset reset#9 wr_control werf_control pc_result[8:2] 0#9 wr werf pc_in[8:2] mux2
+Xcheck1 rd1_[31:0] check1out[7:0] nor4
+Xcheck2 check1out[7:0] check2out[1:0] nand2
+xcheck3 check2out[1:0] z nor2
+
+*******************************************************************************
+* Reset Logic
+*******************************************************************************
+* Reset PC
+Xreset reset#32 pcsel_out[31:0] 0#32 pc_reset[31:0] mux2
+Xdreg pc_reset[31:0] clk#32 pc[31:0] dreg
+
+* Reset Wr
+Xwr_reset reset wr_temp 0 wr mux2
+
+* Reset WERF
+Xwerf_reset reset werf_temp 0 werf mux2
+
+* Reset Digital Waveform
+Wreset reset nrz(0, 5, 20ns, 0ns, 0.001ns, 0.001ns) 1 0
 
 *******************************************************************************
 * Temporarily connect pc[] to the predefined clocks so that we can view each
@@ -215,7 +232,7 @@ Xjdisplaya ra2_b_wdsel[3:0] ra2sel bsel wdsel[1:0] join
 Xjdisplayb wr_werfs[2:0]    wr werf werf_          join
 
 *******************************************************************************
-* PLOTTING
+* Plotting
 *******************************************************************************
 .tran 1280ns
 .plot pc[8:0]
