@@ -160,8 +160,12 @@ Xjcontrolb control11      ra2sel     join
 Xjcontrolc control10      bsel       join
 Xjcontrold control[9:8]   wdsel[1:0] join
 Xjcontrole control[7:2]   alufn[5:0] join
-Xjcontrolf control1       wr         join
-Xjcontrolg control0       werf       join
+
+* Reset Wr
+Xwr_reset reset control1 0 wr mux2
+
+* Reset WERF
+Xwerf_reset reset control0 0 werf mux2
 
 *******************************************************************************
 * Instruction Signals
@@ -175,25 +179,48 @@ Xjinste inst[15:0]  c[15:0]     join
 *******************************************************************************
 * Program Counter (PC)
 *******************************************************************************
+* PC Register
+.connect clk3 clk
+Xdreg pc_reset[31:0] clk#32 pc[31:0] dreg
+
+* PC + 4
+Xpcplus4 pc[31:0] 0#29 vdd 0#2 0 pc_plus_4[31:0] c_out[31:30] add32 
+
+* PCSEL MUX (<PC>+4 if 00, BT if 01, JT if 10)
+Xpcsel_mux pcsel1#32 pcsel0#32 pc_plus_4[31:0] jt[31:0] bt[31:0] 0#32 pcsel_out[31:0] mux4
+
+* Reset PC
+Xreset reset#32 pcsel_out[31:0] 0#32 pc_reset[31:0] mux2
 
 *******************************************************************************
-* MUXs for PCSEL, RA2SEL, BSEL, WDSEL
+* Connections and MUXs
 *******************************************************************************
+* Instruction ra to Register File ra1
+Xjira_to_rfra1 ra[4:0] ra1_[4:0] join
+
+* Instruction rb/rc to Register File ra2
 * RA2SEL MUX (Rb if 0, Rc if 1)
 Xra2sel_mux ra2sel#5 rb[4:0] rc[4:0] ra2_[4:0] mux2
 
-* BSEL MUX (RD2 if 0, C (sign-extended) if 1)
-Xbsel_mux bsel#32 rd2_[31:0] c15#16 c[15:0] b[31:0] mux2
+* Instruction rc to Register File wa
+Xjrc_to_wa rc[4:0] wa[4:0] join
 
+* Register File rd2 to Memory wd
+Xjrd2_to_wd rd2_[31:0] memwd[31:0] join
+
+* Register File rd2 / Instruction rc to ALU b
+* BSEL MUX (RD2 if 0, C (sign-extended) if 1)
+Xbsel_mux bsel#32 rd2_[31:0] c15#16 c[15:0] bsel_out[31:0] mux2
+
+* Register File rd1 and BSEL to ALU
+Xalu rd1_[31:0] bsel_out[31:0] alufn[5:0] f[31:0] alu32
+
+* <PC>+4 / ALU f / Memory rd to Register File wd
 * WDSEL MUX (<PC>+4 if 00, ALU Output if 01, Memory RD if 10)
 Xwdsel_mux wdsel1#32 wdsel0#32 pc_plus_4[31:0] memrd[31:0] f[31:0] 0#32 wd[31:0] mux4
 
-*******************************************************************************
-* NOR Gate for Z
-*******************************************************************************
-Xcheck1 rd1_[31:0] check1out[7:0] nor4
-Xcheck2 check1out[7:0] check2out[1:0] nand2
-xcheck3 check2out[1:0] z nor2
+* ALU f to Memory a
+Xjaluf_to_mema f[31:0] mema[31:0] join
 
 *******************************************************************************
 * Jump and Branch Targets
@@ -202,40 +229,19 @@ xcheck3 check2out[1:0] z nor2
 Xjt rd1_[31:0] jt[31:0] join
 
 * Branch Target (<PC>+4+4C, where multiplying by 4 is done with a shift-left twice)
-Xbt pc_plus_4[31:0] c15#14 c[15:0] 0#2 0 bt[31:0] add32
+Xbt pc_plus_4[31:0] c15#14 c[15:0] 0#2 0 bt[31:0] bt_cout[31:30] add32
 
 *******************************************************************************
-* Reset Logic
+* NOR Gate for Z
 *******************************************************************************
-* Reset PC
-Xreset reset#32 pcsel_out[31:0] 0#32 pc_reset[31:0] mux2
-Xdreg pc_reset[31:0] clk#32 pc[31:0] dreg
+Xcheck1 rd1_[31:0] check1out[7:0] nor4
+Xcheck2 check1out[7:0] check2out[1:0] nand4
+xcheck3 check2out[1:0] z nor2
 
-* Reset Wr
-Xwr_reset reset wr_temp 0 wr mux2
-
-* Reset WERF
-Xwerf_reset reset werf_temp 0 werf mux2
-
+*******************************************************************************
 * Reset Digital Waveform
+*******************************************************************************
 Wreset reset nrz(0, 5, 20ns, 0ns, 0.001ns, 0.001ns) 1 0
-
-*******************************************************************************
-* Temporarily connect pc[] to the predefined clocks so that we can view each
-* instruction in sequence.
-* Note that you will need to replace this with a real program counter circuit
-* in the final lab!
-*******************************************************************************
-Xjpc clk[8:2] pc[8:2] join
-.connect 0 pc[1:0]
-
-*******************************************************************************
-* Temporarily connect other undefined signals.
-* Note that you will need to remove these signals from this section once you
-* connect them elsewhere!
-*******************************************************************************
-.connect vdd clk ra1_[4:0] ra2_[4:0] wa[4:0] wd[31:0] mema[8:0] memwd[31:0]
-.connect 0 z
 
 *******************************************************************************
 * Plot some signals together
